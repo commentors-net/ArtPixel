@@ -11,9 +11,14 @@ let activePalette = {};
 let selectedColorCode = null; // null means eraser
 let isEraserMode = false;
 let isMouseDown = false;
+let isTouching = false;
 let viewMode = 'art'; // 'art' = pure solid colors, 'codes' = letter code overlay
 let activeTeammates = new Map();
 let cursorThrottleTimer = null;
+
+// Dynamic cell sizing & zoom
+let currentCellSize = 26;
+let baseCellSize = 26;
 
 // Timer state
 let timerRunning = false;
@@ -89,6 +94,7 @@ function setupSession(data) {
         selectColor(colorCodes[0]);
     }
 
+    initCellSize();
     renderPalette();
     buildCoordinateGrid();
     renderAllCells();
@@ -106,6 +112,48 @@ function setupSession(data) {
     }
 }
 
+// Responsive Zoom calculation
+function initCellSize() {
+    if (!sessionData) return;
+    const screenW = window.innerWidth;
+    const gridCols = sessionData.width || 20;
+
+    if (screenW <= 480) {
+        // Fits full width on mobile phones without horizontal overflow
+        currentCellSize = Math.max(14, Math.floor((screenW - 52) / gridCols));
+    } else if (screenW <= 768) {
+        currentCellSize = Math.max(18, Math.floor((screenW - 70) / gridCols));
+    } else {
+        currentCellSize = 26;
+    }
+    baseCellSize = currentCellSize;
+    applyCellSize(currentCellSize);
+}
+
+function applyCellSize(size) {
+    currentCellSize = size;
+    document.documentElement.style.setProperty('--cell-size', `${size}px`);
+    const pct = Math.round((currentCellSize / baseCellSize) * 100);
+    const zoomEl = document.getElementById('zoomLabel');
+    if (zoomEl) zoomEl.textContent = `${pct}%`;
+}
+
+function changeZoom(delta) {
+    const newSize = Math.min(38, Math.max(12, currentCellSize + delta));
+    applyCellSize(newSize);
+}
+
+function resetZoom() {
+    initCellSize();
+}
+
+window.addEventListener('resize', () => {
+    // Only re-init if not manually zoomed
+    if (Math.abs(currentCellSize - baseCellSize) <= 2) {
+        initCellSize();
+    }
+});
+
 // Build coordinate headers (A-T / A-Y, 1-20 / 1-25)
 function buildCoordinateGrid() {
     const colContainer = document.getElementById('topColHeaders');
@@ -119,8 +167,8 @@ function buildCoordinateGrid() {
     const width = sessionData.width;
     const height = sessionData.height;
 
-    board.style.gridTemplateColumns = `repeat(${width}, 26px)`;
-    board.style.gridTemplateRows = `repeat(${height}, 26px)`;
+    board.style.gridTemplateColumns = `repeat(${width}, var(--cell-size, 26px))`;
+    board.style.gridTemplateRows = `repeat(${height}, var(--cell-size, 26px))`;
 
     // Top col headers
     for (let c = 0; c < width; c++) {
@@ -147,7 +195,7 @@ function buildCoordinateGrid() {
             cell.dataset.row = r;
             cell.dataset.col = c;
 
-            // Events for painting
+            // Mouse painting
             cell.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 paintCell(r, c);
@@ -164,9 +212,47 @@ function buildCoordinateGrid() {
             board.appendChild(cell);
         }
     }
+
+    // Setup touch drag-to-paint on mobile devices
+    setupTouchPainting(board);
 }
 
-// Render palette buttons with keyboard shortcuts
+// Mobile touch painting handler
+function setupTouchPainting(board) {
+    board.addEventListener('touchstart', (e) => {
+        isTouching = true;
+        handleTouch(e.touches[0]);
+    }, { passive: false });
+
+    board.addEventListener('touchmove', (e) => {
+        if (!isTouching) return;
+        e.preventDefault(); // prevent viewport scrolling while dragging to paint
+        handleTouch(e.touches[0]);
+    }, { passive: false });
+
+    board.addEventListener('touchend', () => {
+        isTouching = false;
+    });
+
+    board.addEventListener('touchcancel', () => {
+        isTouching = false;
+    });
+
+    function handleTouch(touch) {
+        if (!touch) return;
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (target && target.classList && target.classList.contains('pixel-cell')) {
+            const r = parseInt(target.dataset.row, 10);
+            const c = parseInt(target.dataset.col, 10);
+            if (!isNaN(r) && !isNaN(c)) {
+                paintCell(r, c);
+                updateHoverInfo(r, c);
+            }
+        }
+    }
+}
+
+// Render palette buttons without scrollbar clipping
 function renderPalette() {
     const container = document.getElementById('paletteGrid');
     container.innerHTML = '';
@@ -179,6 +265,7 @@ function renderPalette() {
         const btn = document.createElement('div');
         btn.className = `palette-btn ${selectedColorCode === code && !isEraserMode ? 'active' : ''}`;
         btn.id = `palette_btn_${code}`;
+        btn.title = `${info.name} (${code}) · Click to select`;
         btn.onclick = () => selectColor(code);
 
         btn.innerHTML = `
@@ -192,6 +279,16 @@ function renderPalette() {
 
         container.appendChild(btn);
         idx++;
+    }
+
+    // Adaptive shortcut tip for mobile
+    const tipEl = document.getElementById('paletteShortcutTip');
+    if (tipEl) {
+        if (window.innerWidth <= 600 || ('ontouchstart' in window)) {
+            tipEl.innerHTML = '⚡ Tap any swatch above, then tap/drag on the grid to paint!';
+        } else {
+            tipEl.innerHTML = '⚡ Tip: Keys <strong>1-9, 0, -, =</strong> switch colors rapidly!';
+        }
     }
 }
 
@@ -264,7 +361,6 @@ function updateCellDOM(r, c, code) {
     if (code && activePalette[code]) {
         cell.style.backgroundColor = activePalette[code].hex;
         cell.style.color = activePalette[code].text;
-        // User requested: "when i click i want the actual color not the color code to be filled"
         cell.textContent = (viewMode === 'codes') ? code : '';
     } else {
         cell.style.backgroundColor = '#111827';
@@ -334,7 +430,6 @@ socket.on('pixel:updated', (payload) => {
 });
 
 socket.on('cursor:updated', ({ playerId, nickname, avatarColor, row, col }) => {
-    // Remove existing cursor for this player
     document.querySelectorAll(`.peer-cursor-${playerId}`).forEach(el => el.remove());
 
     const cell = document.getElementById(`cell_${row}_${col}`);
@@ -347,7 +442,7 @@ socket.on('cursor:updated', ({ playerId, nickname, avatarColor, row, col }) => {
     }
 });
 
-socket.on('player:joined', ({ playerId, nickname, avatarColor, activeCount }) => {
+socket.on('player:joined', ({ playerId, nickname, avatarColor }) => {
     activeTeammates.set(playerId, { id: playerId, nickname, avatarColor });
     renderTeammates();
 });

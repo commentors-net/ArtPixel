@@ -8,9 +8,23 @@
     <style>
         .admin-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
         }
+
+        @media (max-width: 600px) {
+            .admin-session-card {
+                padding: 14px;
+            }
+            .modal-card {
+                max-width: 95vw;
+                max-height: 92vh;
+            }
+            .modal-body {
+                padding: 14px;
+            }
+        }
+
 
         .admin-session-card {
             background-color: var(--panel-bg);

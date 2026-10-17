@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pixel Mission - Collaborative Canvas</title>
     <link rel="stylesheet" href="/css/main.css">
     <style>
+        :root {
+            --cell-size: 26px;
+        }
+
         .game-layout {
             display: flex;
             gap: 24px;
@@ -14,14 +18,16 @@
         }
 
         .side-panel {
-            width: 320px;
+            width: 330px;
             display: flex;
             flex-direction: column;
             gap: 16px;
+            flex-shrink: 0;
         }
 
         .canvas-panel {
             flex: 1;
+            min-width: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -31,34 +37,82 @@
             padding: 24px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Canvas Top Toolbar */
+        .canvas-toolbar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 650px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background-color: #0c1220;
+            border: 1px solid var(--border-color);
+            padding: 3px 6px;
+            border-radius: 6px;
+        }
+
+        .zoom-btn {
+            background-color: #1e293b;
+            color: #fff;
+            border: 1px solid #334155;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .zoom-btn:hover {
+            background-color: #334155;
         }
 
         /* Coordinate Grid Wrapper */
         .grid-wrapper {
             display: inline-block;
             background-color: #0c1220;
-            padding: 12px;
+            padding: 10px;
             border-radius: 12px;
             border: 2px solid var(--border-color);
             user-select: none;
             position: relative;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .col-header-row {
             display: flex;
-            margin-left: 28px; /* space for row labels */
+            margin-left: calc(var(--cell-size, 26px) + 2px); /* matches row label width */
         }
 
         .col-label {
-            width: 26px;
-            height: 20px;
-            font-size: 11px;
+            width: var(--cell-size, 26px);
+            height: 18px;
+            font-size: clamp(9px, 1.8vw, 11px);
             font-weight: 700;
             color: var(--text-muted);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 1px;
+            margin: 0 0.5px;
+            flex-shrink: 0;
         }
 
         .grid-middle-row {
@@ -68,19 +122,20 @@
         .row-labels-col {
             display: flex;
             flex-direction: column;
-            width: 26px;
+            width: calc(var(--cell-size, 26px) + 2px);
+            flex-shrink: 0;
         }
 
         .row-label {
-            height: 26px;
-            font-size: 11px;
+            height: var(--cell-size, 26px);
+            font-size: clamp(9px, 1.8vw, 11px);
             font-weight: 700;
             color: var(--text-muted);
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            padding-right: 6px;
-            margin: 1px 0;
+            padding-right: 4px;
+            margin: 0.5px 0;
         }
 
         .pixel-board {
@@ -90,20 +145,22 @@
             border: 1px solid #273552;
             border-radius: 4px;
             overflow: hidden;
+            touch-action: none; /* enables smooth finger touch painting */
         }
 
         .pixel-cell {
-            width: 26px;
-            height: 26px;
+            width: var(--cell-size, 26px);
+            height: var(--cell-size, 26px);
             background-color: #111827;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
+            font-size: clamp(7px, 1.4vw, 10px);
             font-weight: bold;
             cursor: pointer;
             position: relative;
             transition: transform 0.08s ease, filter 0.15s ease;
+            box-sizing: border-box;
         }
 
         .pixel-cell:hover {
@@ -129,28 +186,44 @@
             to { opacity: 1; transform: scale(1.15); }
         }
 
-        /* Palette Swatches */
+        /* Fixed Palette Grid without horizontal/vertical overflow scrollbars */
         .palette-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 8px;
-            max-height: 290px;
+            max-height: 320px;
+            overflow-x: hidden;
             overflow-y: auto;
-            padding-right: 4px;
+            padding-right: 2px;
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
+        }
+
+        .palette-grid::-webkit-scrollbar {
+            width: 5px;
+        }
+        .palette-grid::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .palette-grid::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
         }
 
         .palette-btn {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             background-color: #0c1220;
             border: 2px solid var(--border-color);
             border-radius: 8px;
-            padding: 6px 10px;
+            padding: 7px 8px;
             cursor: pointer;
             transition: all 0.15s ease;
             text-align: left;
             color: #fff;
+            min-width: 0; /* Prevents overflow blowout */
+            box-sizing: border-box;
         }
 
         .palette-btn:hover {
@@ -161,12 +234,12 @@
         .palette-btn.active {
             border-color: #38bdf8;
             box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
-            background-color: rgba(56, 189, 248, 0.1);
+            background-color: rgba(56, 189, 248, 0.12);
         }
 
         .swatch-box {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             border-radius: 4px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             flex-shrink: 0;
@@ -175,20 +248,25 @@
         .swatch-info {
             display: flex;
             flex-direction: column;
+            min-width: 0;
+            flex: 1;
             overflow: hidden;
-            font-size: 0.8rem;
         }
 
         .swatch-name {
             font-weight: 600;
+            font-size: 0.78rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
         .swatch-sub {
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .shortcut-badge {
@@ -196,10 +274,11 @@
             background-color: #1e293b;
             color: #94a3b8;
             border: 1px solid #334155;
-            font-size: 0.65rem;
+            font-size: 0.62rem;
             font-family: monospace;
-            padding: 2px 5px;
+            padding: 2px 4px;
             border-radius: 4px;
+            flex-shrink: 0;
         }
 
         /* Teammates List */
@@ -207,7 +286,7 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            max-height: 160px;
+            max-height: 140px;
             overflow-y: auto;
         }
 
@@ -232,15 +311,115 @@
 
         /* Timer display */
         .timer-badge {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 800;
             font-family: monospace;
             color: #38bdf8;
             background-color: #0c1220;
             border: 1px solid var(--border-color);
-            padding: 6px 16px;
+            padding: 6px 14px;
             border-radius: 8px;
             letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        /* Mobile & Tablet Responsiveness */
+        @media (max-width: 900px) {
+            .game-layout {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .canvas-panel {
+                order: 1;
+                width: 100%;
+                padding: 16px 10px;
+            }
+
+            .side-panel {
+                order: 2;
+                width: 100%;
+            }
+
+            .palette-card-wrap {
+                order: 1; /* Place palette directly below canvas for easy mobile tapping */
+            }
+
+            .palette-grid {
+                grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+                max-height: none; /* No vertical scroll on mobile */
+                overflow-y: visible;
+            }
+
+            .shortcut-badge {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            :root {
+                --cell-size: 17px;
+            }
+
+            .app-header {
+                padding: 10px 14px;
+                gap: 8px;
+            }
+
+            .brand-title {
+                font-size: 1.05rem;
+            }
+
+            .brand-subtitle {
+                display: none;
+            }
+
+            .timer-badge {
+                font-size: 1.1rem;
+                padding: 4px 10px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            .canvas-panel {
+                padding: 12px 6px;
+                border-radius: 12px;
+            }
+
+            .grid-wrapper {
+                padding: 6px;
+                border-radius: 8px;
+            }
+
+            .canvas-toolbar {
+                font-size: 0.78rem;
+                justify-content: space-between;
+            }
+
+            .palette-grid {
+                grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+                gap: 6px;
+            }
+
+            .palette-btn {
+                padding: 6px 6px;
+                gap: 6px;
+            }
+
+            .swatch-box {
+                width: 18px;
+                height: 18px;
+            }
+
+            .swatch-name {
+                font-size: 0.74rem;
+            }
+
+            .swatch-sub {
+                font-size: 0.64rem;
+            }
         }
     </style>
 </head>
@@ -254,17 +433,60 @@
                 <p class="brand-subtitle" id="navImageInfo">Connecting to table...</p>
             </div>
         </a>
-        <div style="display: flex; gap: 16px; align-items: center;">
+        <div style="display: flex; gap: 10px; align-items: center;">
             <div class="timer-badge" id="timerDisplay">00:00.0</div>
-            <a href="/" class="btn btn-secondary btn-sm">Leave Table</a>
+            <a href="/" class="btn btn-secondary btn-sm">Leave</a>
         </div>
     </header>
 
     <div class="container">
         <div class="game-layout">
 
-            <!-- Left Tool Panel -->
+            <!-- Main Canvas / Grid View (Placed First on Mobile) -->
+            <div class="canvas-panel">
+                <div class="canvas-toolbar">
+                    <div>Coord: <strong id="hoverCoordLabel" style="color: #38bdf8;">--</strong></div>
+                    <div>Target: <strong id="hoverTargetLabel" style="color: #fff;">--</strong></div>
+                    
+                    <div class="zoom-controls">
+                        <span style="font-size: 0.72rem; margin-right: 4px;">Zoom:</span>
+                        <button class="zoom-btn" onclick="changeZoom(-2)" title="Zoom Out">−</button>
+                        <span id="zoomLabel" style="font-size: 0.75rem; font-family: monospace; color: var(--text-muted); min-width: 24px; text-align: center;">100%</span>
+                        <button class="zoom-btn" onclick="changeZoom(+2)" title="Zoom In">+</button>
+                        <button class="zoom-btn" onclick="resetZoom()" title="Fit to Screen" style="font-size: 10px; width: 28px;">FIT</button>
+                    </div>
+                </div>
+
+                <div class="grid-wrapper">
+                    <!-- Top Col Headers (A, B, C...) -->
+                    <div class="col-header-row" id="topColHeaders"></div>
+
+                    <div class="grid-middle-row">
+                        <!-- Left Row Numbers (1, 2, 3...) -->
+                        <div class="row-labels-col" id="leftRowHeaders"></div>
+
+                        <!-- Pixel Board -->
+                        <div class="pixel-board" id="pixelBoard"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Side Tool Panel -->
             <div class="side-panel">
+                <!-- Palette Tool (Directly accessible beneath canvas on mobile) -->
+                <div class="card palette-card-wrap">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="margin: 0; font-size: 0.85rem;">Color Palette</label>
+                        <button class="btn btn-sm btn-secondary" id="eraserBtn" onclick="selectEraser()">🧹 Eraser</button>
+                    </div>
+                    <div class="palette-grid" id="paletteGrid">
+                        <!-- Swatches injected via JS -->
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 10px; text-align: center;" id="paletteShortcutTip">
+                        ⚡ Tip: Keys <strong>1-9, 0, -, =</strong> switch colors rapidly!
+                    </div>
+                </div>
+
                 <!-- Session Progress Card -->
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -277,20 +499,6 @@
                     <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
                         <span>Accuracy: <strong id="accuracyText" style="color: #34d399;">0%</strong></span>
                         <span>Matched: <strong id="matchedCellsText">0 / 400</strong></span>
-                    </div>
-                </div>
-
-                <!-- Palette Tool -->
-                <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label style="margin: 0;">Color Palette</label>
-                        <button class="btn btn-sm btn-secondary" id="eraserBtn" onclick="selectEraser()">🧹 Eraser</button>
-                    </div>
-                    <div class="palette-grid" id="paletteGrid">
-                        <!-- Swatches injected via JS -->
-                    </div>
-                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 10px; text-align: center;">
-                        ⚡ Tip: Press keys <strong>1-9, 0, -, =</strong> to switch colors rapidly!
                     </div>
                 </div>
 
@@ -309,30 +517,8 @@
                 <div class="card">
                     <label>View Mode</label>
                     <div style="display: flex; gap: 8px; margin-top: 4px;">
-                        <button class="btn btn-sm" id="btnArtView" style="flex: 1;" onclick="setViewMode('art')">Pure Colors</button>
+                        <button class="btn btn-sm btn-primary" id="btnArtView" style="flex: 1;" onclick="setViewMode('art')">Pure Colors</button>
                         <button class="btn btn-sm btn-secondary" id="btnCodeView" style="flex: 1;" onclick="setViewMode('codes')">Code Letters</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Canvas / Grid View -->
-            <div class="canvas-panel">
-                <div style="display: flex; justify-content: space-between; width: 100%; max-width: 650px; margin-bottom: 12px; font-size: 0.85rem; color: var(--text-muted);">
-                    <div>Coordinate: <strong id="hoverCoordLabel" style="color: #38bdf8;">--</strong></div>
-                    <div>Click or drag to paint the actual color</div>
-                    <div>Target: <strong id="hoverTargetLabel" style="color: #fff;">--</strong></div>
-                </div>
-
-                <div class="grid-wrapper">
-                    <!-- Top Col Headers (A, B, C...) -->
-                    <div class="col-header-row" id="topColHeaders"></div>
-
-                    <div class="grid-middle-row">
-                        <!-- Left Row Numbers (1, 2, 3...) -->
-                        <div class="row-labels-col" id="leftRowHeaders"></div>
-
-                        <!-- Pixel Board -->
-                        <div class="pixel-board" id="pixelBoard"></div>
                     </div>
                 </div>
             </div>
@@ -342,15 +528,15 @@
 
     <!-- Victory Celebration Modal -->
     <div class="modal-overlay" id="victoryModal">
-        <div class="modal-card" style="max-width: 480px; text-align: center;">
-            <div class="modal-body" style="padding: 40px 24px;">
-                <div style="font-size: 4rem; margin-bottom: 16px;">🏆</div>
-                <h2 style="font-size: 1.8rem; margin: 0 0 10px 0; color: #38bdf8;">Mission Accomplished!</h2>
-                <p style="color: var(--text-muted); margin: 0 0 20px 0;">Your team successfully completed the pixel art mission!</p>
+        <div class="modal-card" style="max-width: 440px; text-align: center;">
+            <div class="modal-body" style="padding: 30px 20px;">
+                <div style="font-size: 3.5rem; margin-bottom: 12px;">🏆</div>
+                <h2 style="font-size: 1.6rem; margin: 0 0 8px 0; color: #38bdf8;">Mission Accomplished!</h2>
+                <p style="color: var(--text-muted); margin: 0 0 18px 0; font-size: 0.9rem;">Your team completed the pixel art mission!</p>
 
-                <div style="background-color: #0c1220; border-radius: 12px; padding: 16px; margin-bottom: 24px; border: 1px solid var(--border-color);">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px;">Final Completion Time</div>
-                    <div id="victoryFinalTime" style="font-size: 2rem; font-weight: 800; font-family: monospace; color: #34d399;">00:00.0</div>
+                <div style="background-color: #0c1220; border-radius: 12px; padding: 14px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Final Completion Time</div>
+                    <div id="victoryFinalTime" style="font-size: 1.8rem; font-weight: 800; font-family: monospace; color: #34d399;">00:00.0</div>
                 </div>
 
                 <button class="btn btn-primary" onclick="closeVictoryModal()" style="width: 100%;">Keep Viewing Masterpiece</button>
