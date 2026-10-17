@@ -1,0 +1,26 @@
+{
+  "name": "artpixel",
+  "version": "1.0.0",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node --experimental-sqlite --no-warnings server/index.js"
+  },
+  "keywords": [
+    "pixel-art",
+    "multiplayer",
+    "collaborative",
+    "pixel-mission"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/storage": "^8.4.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.4"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.git
+.vscode
+.gemini
+*.db
+*.db-shm
+*.db-wal
+test_*.js
+extracted_*
+scratch

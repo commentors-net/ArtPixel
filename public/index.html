@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Mission - Multiplayer Lobby</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        .hero {
+            text-align: center;
+            margin-bottom: 32px;
+            padding: 30px 20px;
+            background: radial-gradient(circle at top, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+            border-radius: 16px;
+            border: 1px solid rgba(56, 189, 248, 0.15);
+        }
+        .hero h1 {
+            font-size: 2.2rem;
+            margin: 0 0 10px 0;
+            background: linear-gradient(135deg, #f8fafc 0%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+            font-size: 1rem;
+        }
+
+        .profile-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+        .profile-bar input {
+            max-width: 280px;
+        }
+
+        .sessions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .session-card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .session-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.4);
+        }
+
+        .session-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .session-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0 0 4px 0;
+        }
+        .session-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .session-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .empty-sessions {
+            text-align: center;
+            padding: 60px 20px;
+            background-color: var(--panel-bg);
+            border: 1px dashed var(--border-color);
+            border-radius: 12px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <a href="/" class="brand">
+            <div class="brand-icon">🎨</div>
+            <div>
+                <h1 class="brand-title">Pixel Mission</h1>
+                <p class="brand-subtitle">Multiplayer Collaborative Canvas</p>
+            </div>
+        </a>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <a href="/admin.html" class="btn btn-secondary btn-sm">⚙️ Admin Center</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="hero">
+            <h1>Collaborative Team Pixel Missions</h1>
+            <p>Pick a table session below, coordinate with your teammates, select your colors, and collaboratively complete the pixel art masterpiece in real time!</p>
+        </div>
+
+        <div class="profile-bar">
+            <div style="flex: 1; min-width: 250px;">
+                <label for="playerNickname">Your Nickname</label>
+                <input type="text" id="playerNickname" placeholder="Enter your name or callsign..." maxlength="24">
+            </div>
+            <div style="color: var(--text-muted); font-size: 0.85rem; align-self: flex-end; padding-bottom: 8px;">
+                💡 Used to identify your pixels on the collaborative grid and leaderboard.
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="font-size: 1.3rem; margin: 0; font-weight: 700;">Active Sessions</h2>
+            <button class="btn btn-secondary btn-sm" onclick="fetchSessions()">🔄 Refresh</button>
+        </div>
+
+        <div id="sessionsContainer" class="sessions-grid">
+            <!-- Dynamic session cards injected here -->
+        </div>
+
+        <div id="emptyState" class="empty-sessions" style="display: none;">
+            <div style="font-size: 3rem; margin-bottom: 12px;">🖼️</div>
+            <h3 style="color: #fff; margin: 0 0 8px 0;">No Active Sessions Right Now</h3>
+            <p style="margin: 0 0 20px 0;">An administrator has not created any game tables yet.</p>
+            <a href="/admin.html" class="btn">Go to Admin Dashboard to Create Sessions</a>
+        </div>
+    </div>
+
+    <script>
+        // Load nickname from storage
+        const nicknameInput = document.getElementById('playerNickname');
+        const savedNickname = localStorage.getItem('pixel_nickname') || '';
+        if (savedNickname) {
+            nicknameInput.value = savedNickname;
+        } else {
+            nicknameInput.value = 'Player ' + Math.floor(100 + Math.random() * 900);
+            localStorage.setItem('pixel_nickname', nicknameInput.value);
+        }
+
+        nicknameInput.addEventListener('input', (e) => {
+            localStorage.setItem('pixel_nickname', e.target.value.trim());
+        });
+
+        async function fetchSessions() {
+            try {
+                const res = await fetch('/api/sessions');
+                const json = await res.json();
+                if (json.success) {
+                    renderSessions(json.data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch sessions:', err);
+            }
+        }
+
+        function renderSessions(sessions) {
+            const container = document.getElementById('sessionsContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            if (!sessions || sessions.length === 0) {
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            container.innerHTML = sessions.map(s => {
+                const badgeClass = `badge-${s.status || 'waiting'}`;
+                const statusLabel = (s.status || 'waiting').toUpperCase();
+                const isFull = s.activePlayersCount >= s.maxPlayers;
+                const isLocked = s.status === 'locked';
+
+                return `
+                    <div class="session-card">
+                        <div class="session-card-header">
+                            <div>
+                                <h3 class="session-title">${escapeHtml(s.name)}</h3>
+                                <p class="session-subtitle">${escapeHtml(s.imageTitle)} (${s.width}×${s.height})</p>
+                            </div>
+                            <span class="badge ${badgeClass}">${statusLabel}</span>
+                        </div>
+
+                        <div>
+                            <div class="session-stats" style="margin-bottom: 6px;">
+                                <span>Progress</span>
+                                <strong>${s.completedPercent.toFixed(1)}%</strong>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar" style="width: ${s.completedPercent}%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="session-stats">
+                            <span>Players Online: <strong>${s.activePlayersCount} / ${s.maxPlayers}</strong></span>
+                            <span>${s.difficulty || 'Normal'}</span>
+                        </div>
+
+                        <button 
+                            class="btn ${isLocked || isFull ? 'btn-secondary' : 'btn-success'}" 
+                            onclick="joinSession('${s.id}')"
+                            ${isLocked ? 'disabled' : ''}
+                        >
+                            ${isLocked ? '🔒 Session Locked' : (isFull ? 'Session Full' : 'Join Table →')}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function joinSession(sessionId) {
+            const nickname = nicknameInput.value.trim() || 'Player';
+            localStorage.setItem('pixel_nickname', nickname);
+            window.location.href = `/game.html?session=${encodeURIComponent(sessionId)}`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+
+        // Initial fetch and auto-refresh every 3s
+        fetchSessions();
+        setInterval(fetchSessions, 3000);
+    </script>
+</body>
+</html>

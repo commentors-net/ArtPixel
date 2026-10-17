@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Mission: Cloud Upload - Live App</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 1.8rem;
+            color: #38bdf8;
+        }
+
+        p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .control-panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            width: 300px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .grid-container {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .pixel-grid {
+            display: grid;
+            grid-template-columns: repeat(20, 24px);
+            grid-template-rows: repeat(20, 24px);
+            gap: 1px;
+            background-color: var(--border-color);
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .pixel-cell {
+            width: 24px;
+            height: 24px;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s ease, filter 0.2s ease;
+        }
+
+        .pixel-cell:hover {
+            filter: brightness(1.15);
+            z-index: 10;
+            transform: scale(1.1);
+        }
+
+        .btn {
+            background-color: #0284c7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background-color: #0369a1;
+        }
+
+        .btn-secondary {
+            background-color: #475569;
+        }
+        .btn-secondary:hover {
+            background-color: #334155;
+        }
+
+        .btn-danger {
+            background-color: #dc2626;
+        }
+        .btn-danger:hover {
+            background-color: #b91c1c;
+        }
+
+        .legend-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 250px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .swatch {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stats-box {
+            background-color: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .timer-display {
+            font-size: 1.4rem;
+            font-weight: bold;
+            font-family: monospace;
+            color: #38bdf8;
+            text-align: center;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            padding: 6px;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Pixel Mission: Cloud Upload</h1>
+        <p>Interactive Team Grid & Cell-by-Cell Animation Tool</p>
+    </header>
+
+    <div class="main-container">
+        <!-- Control Sidebar -->
+        <div class="control-panel">
+            <div class="stats-box">
+                <label>Stopwatch Challenge</label>
+                <div id="timer" class="timer-display">00:00.0</div>
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                    <button class="btn" id="startTimerBtn" onclick="toggleTimer()" style="padding: 6px;">Start Timer</button>
+                    <button class="btn btn-secondary" onclick="resetTimer()" style="padding: 6px;">Reset</button>
+                </div>
+            </div>
+
+            <hr style="border-color: var(--border-color); margin: 0;">
+
+            <div>
+                <button class="btn" onclick="playRevealAnimation()">▶ Play Cell-by-Cell Reveal</button>
+                <button class="btn btn-secondary" onclick="resetGrid()" style="margin-top: 8px;">Clear Grid</button>
+                <button class="btn btn-danger" onclick="fillAllInstant()" style="margin-top: 8px;">Fill All Instantly</button>
+            </div>
+
+            <div>
+                <label for="speedRange">Reveal Speed: <span id="speedVal">20</span>ms / cell</label>
+                <input type="range" id="speedRange" min="5" max="100" value="20" oninput="updateSpeed(this.value)">
+            </div>
+
+            <div>
+                <label>View Mode</label>
+                <select id="viewModeSelect" onchange="changeViewMode(this.value)">
+                    <option value="codes">Show Letter Codes</option>
+                    <option value="art">Pure Art (Colors Only)</option>
+                </select>
+            </div>
+
+            <hr style="border-color: var(--border-color); margin: 0;">
+
+            <div>
+                <label>Color Palette Legend</label>
+                <div class="legend-list" id="legendList"></div>
+            </div>
+        </div>
+
+        <!-- Main Grid View -->
+        <div class="grid-container">
+            <div style="margin-bottom: 12px; display: flex; justify-content: space-between; width: 100%; align-items: center; font-size: 0.85rem; color: var(--text-muted);">
+              <span>Grid: 20 × 20 Columns (A–T)</span>
+              <span>Status: <strong id="animStatus" style="color: #38bdf8;">Ready</strong></span>
+            </div>
+            <div class="pixel-grid" id="pixelGrid"></div>
+        </div>
+    </div>
+
+<script>
+    // Color Palette definition with exact hex codes from Excel
+    const palette = {
+        'K': { name: 'Black', hex: '#1C1C1C', text: '#FFFFFF' },
+        'W': { name: 'White', hex: '#FFFFFF', text: '#1C1C1C' },
+        'R': { name: 'Red', hex: '#D62828', text: '#FFFFFF' },
+        'O': { name: 'Orange', hex: '#F77F00', text: '#1C1C1C' },
+        'Y': { name: 'Yellow', hex: '#FCD116', text: '#1C1C1C' },
+        'G': { name: 'Light green', hex: '#8CC63F', text: '#1C1C1C' },
+        'N': { name: 'Dark green', hex: '#1E7B34', text: '#FFFFFF' },
+        'L': { name: 'Light blue', hex: '#5BC0EB', text: '#1C1C1C' },
+        'B': { name: 'Dark blue', hex: '#1D3F8F', text: '#FFFFFF' },
+        'V': { name: 'Violet', hex: '#7B3FA0', text: '#FFFFFF' },
+        'P': { name: 'Pink', hex: '#F28DB2', text: '#1C1C1C' },
+        'T': { name: 'Brown', hex: '#7A4A26', text: '#FFFFFF' }
+    };
+
+
+    const gridData = [
+        ["L","L","L","L","L","L","L","L","L","L","L","L","K","L","K","L","O","Y","Y","Y"],
+        ["L","L","K","L","K","L","L","W","W","W","W","W","L","K","L","L","L","L","Y","Y"],
+        ["L","L","L","K","L","W","W","W","W","W","W","W","W","W","L","L","L","O","L","O"],
+        ["L","L","L","W","W","W","W","W","W","B","B","W","W","W","W","W","L","L","L","L"],
+        ["L","L","W","W","W","W","W","W","B","B","B","B","W","W","W","W","W","L","L","L"],
+        ["L","L","W","W","W","W","W","B","B","B","B","B","B","W","W","W","W","W","L","L"],
+        ["L","L","W","W","W","W","W","W","W","B","B","W","W","W","W","W","W","W","L","L"],
+        ["L","L","L","W","W","W","W","W","W","B","B","W","W","W","W","W","W","L","L","L"],
+        ["L","L","L","L","W","W","W","W","W","W","W","W","W","W","W","L","L","L","L","L"],
+        ["L","L","L","L","L","L","O","L","L","Y","O","L","L","Y","L","L","L","L","L","L"],
+        ["L","L","L","L","L","L","Y","L","L","O","Y","L","L","O","L","L","L","L","L","L"],
+        ["L","L","L","L","K","K","K","K","K","K","K","K","K","K","K","K","L","L","L","L"],
+        ["L","L","L","L","K","G","R","Y","K","W","W","W","K","B","B","K","P","P","P","P"],
+        ["V","V","V","V","K","K","K","K","K","K","K","K","K","K","K","K","L","P","L","P"],
+        ["V","B","G","V","K","G","Y","G","K","W","W","W","K","B","B","K","L","K","L","K"],
+        ["V","P","B","V","K","K","K","K","K","K","K","K","K","K","K","K","L","R","R","R"],
+        ["V","V","V","V","K","R","G","Y","K","W","W","W","K","B","B","K","L","R","Y","R"],
+        ["W","W","W","W","K","K","K","K","K","K","K","K","K","K","K","K","K","K","K","K"],
+        ["N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N"],
+        ["T","T","T","T","T","T","T","T","T","T","T","T","T","T","T","T","T","T","T","T"]
+    ];
+
+    let currentState = Array(20).fill(null).map(() => Array(20).fill('')); // initially empty
+    let viewMode = 'art'; // 'art' (pure actual colors) or 'codes' (letter codes)
+    let animationSpeed = 20;
+    let isAnimating = false;
+    let animationTimeouts = [];
+
+    // Timer variables
+    let timerInterval = null;
+    let stopwatchSeconds = 0;
+    let timerRunning = false;
+
+    function initLegend() {
+        const list = document.getElementById('legendList');
+        list.innerHTML = '';
+        for (const [code, info] of Object.entries(palette)) {
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            item.innerHTML = `<div class="swatch" style="background-color: ${info.hex}"></div><span><strong>${code}</strong>: ${info.name}</span>`;
+            list.appendChild(item);
+        }
+    }
+
+    function renderGrid() {
+        const gridEl = document.getElementById('pixelGrid');
+        gridEl.innerHTML = '';
+        
+        for (let r = 0; r < 20; r++) {
+            for (let c = 0; c < 20; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'pixel-cell';
+                cell.dataset.row = r;
+                cell.dataset.col = c;
+                
+                const code = currentState[r][c];
+                if (code && palette[code]) {
+                    cell.style.backgroundColor = palette[code].hex;
+                    cell.style.color = palette[code].text;
+                    cell.textContent = (viewMode === 'codes') ? code : '';
+                } else {
+                    cell.style.backgroundColor = '#111827';
+                    cell.style.color = '#4b5563';
+                    cell.textContent = (viewMode === 'codes') ? '.' : '';
+                }
+
+                cell.onclick = () => handleCellClick(r, c);
+                gridEl.appendChild(cell);
+            }
+        }
+    }
+
+    function handleCellClick(r, c) {
+        if (isAnimating) return;
+        // User requested: fill the actual color directly on click!
+        if (currentState[r][c] === gridData[r][c]) {
+            currentState[r][c] = ''; // click again to clear
+        } else {
+            currentState[r][c] = gridData[r][c]; // sets actual target color
+        }
+        renderGrid();
+    }
+
+    function resetGrid() {
+        stopAnimation();
+        currentState = Array(20).fill(null).map(() => Array(20).fill(''));
+        renderGrid();
+        document.getElementById('animStatus').textContent = 'Cleared';
+    }
+
+    function fillAllInstant() {
+        stopAnimation();
+        for (let r = 0; r < 20; r++) {
+            for (let c = 0; c < 20; c++) {
+                currentState[r][c] = gridData[r][c];
+            }
+        }
+        renderGrid();
+        document.getElementById('animStatus').textContent = 'Fully Revealed';
+    }
+
+    function stopAnimation() {
+        isAnimating = false;
+        animationTimeouts.forEach(t => clearTimeout(t));
+        animationTimeouts = [];
+    }
+
+    // STRICT CELL-BY-CELL SEQUENTIAL ANIMATION (Row 0 Col 0 -> Row 19 Col 19)
+    function playRevealAnimation() {
+        stopAnimation();
+        isAnimating = true;
+        document.getElementById('animStatus').textContent = 'Animating Cell-by-Cell...';
+
+        // Clear grid first
+        currentState = Array(20).fill(null).map(() => Array(20).fill(''));
+        renderGrid();
+
+        let cellIndex = 0;
+        const totalCells = 400;
+
+        function revealNext() {
+            if (!isAnimating) return;
+            if (cellIndex >= totalCells) {
+                isAnimating = false;
+                document.getElementById('animStatus').textContent = 'Complete';
+                return;
+            }
+
+            const r = Math.floor(cellIndex / 20);
+            const c = cellIndex % 20;
+
+            currentState[r][c] = gridData[r][c];
+            
+            // Update single cell in DOM for high performance
+            const cellEl = document.querySelector(`[data-row='${r}'][data-col='${c}']`);
+            if (cellEl) {
+                const code = currentState[r][c];
+                cellEl.style.backgroundColor = palette[code].hex;
+                cellEl.style.color = palette[code].text;
+                cellEl.textContent = (viewMode === 'codes') ? code : '';
+                
+                // Pop animation effect
+                cellEl.style.transform = 'scale(1.2)';
+                setTimeout(() => { cellEl.style.transform = 'scale(1)'; }, 150);
+            }
+
+            cellIndex++;
+            const timeoutId = setTimeout(revealNext, animationSpeed);
+            animationTimeouts.push(timeoutId);
+        }
+
+        revealNext();
+    }
+
+    function updateSpeed(val) {
+        animationSpeed = parseInt(val);
+        document.getElementById('speedVal').textContent = val;
+    }
+
+    function changeViewMode(mode) {
+        viewMode = mode;
+        renderGrid();
+    }
+
+    // Stopwatch logic
+    function toggleTimer() {
+        const btn = document.getElementById('startTimerBtn');
+        if (!timerRunning) {
+            timerRunning = true;
+            btn.textContent = 'Pause Timer';
+            btn.className = 'btn btn-danger';
+            const startTime = Date.now() - (stopwatchSeconds * 1000);
+            timerInterval = setInterval(() => {
+                stopwatchSeconds = (Date.now() - startTime) / 1000;
+                document.getElementById('timer').textContent = formatTime(stopwatchSeconds);
+            }, 100);
+        } else {
+            timerRunning = false;
+            btn.textContent = 'Resume Timer';
+            btn.className = 'btn';
+            clearInterval(timerInterval);
+        }
+    }
+
+    function resetTimer() {
+        timerRunning = false;
+        clearInterval(timerInterval);
+        stopwatchSeconds = 0;
+        document.getElementById('timer').textContent = '00:00.0';
+        const btn = document.getElementById('startTimerBtn');
+        btn.textContent = 'Start Timer';
+        btn.className = 'btn';
+    }
+
+    function formatTime(secTotal) {
+        const mins = Math.floor(secTotal / 60);
+        const secs = Math.floor(secTotal % 60);
+        const tenths = Math.floor((secTotal % 1) * 10);
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+    }
+
+    // Initial setup on load
+    window.onload = () => {
+        initLegend();
+        renderGrid();
+    };
+</script>
+
+</body>
+</html>

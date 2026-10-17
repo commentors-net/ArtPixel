@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Pixel Mission Server",
+      "program": "${workspaceFolder}/server/index.js",
+      "runtimeArgs": [
+        "--experimental-sqlite",
+        "--no-warnings"
+      ],
+      "restart": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Run via npm start",
+      "command": "npm start"
+    }
+  ]
+}

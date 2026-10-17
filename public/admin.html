@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Mission - Admin Command Center</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 20px;
+        }
+
+        .admin-session-card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: border-color 0.2s;
+        }
+        .admin-session-card:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+        }
+
+        .canvas-thumb-wrapper {
+            background-color: #0c1220;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas.session-thumb {
+            image-rendering: pixelated;
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .audit-stream-box {
+            background-color: #0c1220;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            max-height: 380px;
+            overflow-y: auto;
+        }
+
+        .log-match {
+            color: #34d399;
+            font-weight: 700;
+        }
+
+        .log-mismatch {
+            color: #f87171;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <a href="/admin.html" class="brand">
+            <div class="brand-icon">⚙️</div>
+            <div>
+                <h1 class="brand-title">Admin Command & Telemetry</h1>
+                <p class="brand-subtitle">Multiplayer Orchestration & Live Audit Center</p>
+            </div>
+        </a>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <span id="adminLiveTick" class="badge badge-running">● Live Telemetry 1Hz</span>
+            <a href="/" class="btn btn-secondary btn-sm">← Player Lobby</a>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Top Setup Card: Create N Sessions per Image -->
+        <div class="card" style="margin-bottom: 28px; border-color: rgba(56, 189, 248, 0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 1.25rem; margin: 0; font-weight: 700; color: #fff;">
+                    🚀 Setup New Image Sessions
+                </h2>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Configure table sessions, player limits & images</span>
+            </div>
+
+            <form id="createSessionForm" onsubmit="handleCreateSessions(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 160px; gap: 16px; align-items: flex-end;">
+                <div>
+                    <label for="selectImage">Target Image</label>
+                    <select id="selectImage" required>
+                        <option value="">Loading image library...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="inputCount">Number of Sessions (N)</label>
+                    <input type="number" id="inputCount" min="1" max="20" value="2" required placeholder="e.g. 4 tables">
+                </div>
+
+                <div>
+                    <label for="inputMaxPlayers">Max Players / Session</label>
+                    <input type="number" id="inputMaxPlayers" min="1" max="50" value="8" required placeholder="e.g. 10">
+                </div>
+
+                <div>
+                    <label for="inputBaseName">Session Name Prefix</label>
+                    <input type="text" id="inputBaseName" placeholder="e.g. Team Table" maxlength="24">
+                </div>
+
+                <button type="submit" class="btn btn-success" id="btnCreateSessions" style="height: 42px;">
+                    + Create Sessions
+                </button>
+            </form>
+        </div>
+
+        <!-- Section Header with Quick Actions -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h2 style="font-size: 1.3rem; margin: 0; font-weight: 700;">Live Session Monitoring (<span id="totalSessionsCount">0</span>)</h2>
+                <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">Live real-time canvas thumbnails, completion rates, and individual session tracking.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" onclick="refreshAdminSessions()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- Live Sessions Grid -->
+        <div id="adminSessionsContainer" class="admin-grid">
+            <!-- Dynamic session monitoring cards injected via JS -->
+        </div>
+
+        <div id="adminEmptyState" style="display: none; text-align: center; padding: 60px 20px; background-color: var(--panel-bg); border: 1px dashed var(--border-color); border-radius: 12px; color: var(--text-muted);">
+            <h3>No Sessions Configured</h3>
+            <p>Use the form above to spawn your first collaborative session!</p>
+        </div>
+    </div>
+
+    <!-- Deep Inspection & Live Audit Trail Modal -->
+    <div class="modal-overlay" id="inspectorModal">
+        <div class="modal-card" style="max-width: 1050px;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modalSessionTitle" style="margin: 0; font-size: 1.2rem; color: #fff;">Session Inspection</h3>
+                    <p id="modalSessionSubtitle" style="margin: 2px 0 0 0; font-size: 0.8rem; color: var(--text-muted);">Real-time action audit trail & player contributions</p>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <a id="btnExportCsv" href="#" class="btn btn-secondary btn-sm" target="_blank">📥 Export CSV</a>
+                    <a id="btnExportJson" href="#" class="btn btn-secondary btn-sm" target="_blank">📥 Export JSON</a>
+                    <button class="btn btn-secondary btn-sm" onclick="closeInspector()">✕ Close</button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                    <!-- Full Live Canvas Preview -->
+                    <div style="flex: 0 0 240px; display: flex; flex-direction: column; align-items: center; background-color: #0c1220; padding: 14px; border-radius: 10px; border: 1px solid var(--border-color);">
+                        <canvas id="inspectorCanvas" width="200" height="200" style="image-rendering: pixelated; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);"></canvas>
+                        <div style="margin-top: 10px; font-size: 0.8rem; color: var(--text-muted); text-align: center;" id="inspectorCanvasMeta">
+                            Live Spectator View
+                        </div>
+                    </div>
+
+                    <!-- Contribution Leaderboard -->
+                    <div style="flex: 1; min-width: 280px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted);">
+                            🏆 Player Contribution Leaderboard
+                        </h4>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Total Placed</th>
+                                    <th>Correct Pixels</th>
+                                    <th>Accuracy</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardTbody">
+                                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No player actions yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Live Audit Stream Table -->
+                <h4 style="margin: 0 0 8px 0; font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                    <span>📜 Live Pixel Audit Stream (Who Is Doing What)</span>
+                    <span style="font-size: 0.75rem; color: #34d399;">● Real-time event pipe</span>
+                </h4>
+                <div class="audit-stream-box">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Player</th>
+                                <th>Action</th>
+                                <th>Coord</th>
+                                <th>Placed Color</th>
+                                <th>Target Color</th>
+                                <th>Verdict</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditLogsTbody">
+                            <!-- Injected live -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeInspector()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>

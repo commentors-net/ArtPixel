@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Mission - Collaborative Canvas</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        .game-layout {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .side-panel {
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .canvas-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+            overflow-x: auto;
+        }
+
+        /* Coordinate Grid Wrapper */
+        .grid-wrapper {
+            display: inline-block;
+            background-color: #0c1220;
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            user-select: none;
+            position: relative;
+        }
+
+        .col-header-row {
+            display: flex;
+            margin-left: 28px; /* space for row labels */
+        }
+
+        .col-label {
+            width: 26px;
+            height: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 1px;
+        }
+
+        .grid-middle-row {
+            display: flex;
+        }
+
+        .row-labels-col {
+            display: flex;
+            flex-direction: column;
+            width: 26px;
+        }
+
+        .row-label {
+            height: 26px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 6px;
+            margin: 1px 0;
+        }
+
+        .pixel-board {
+            display: grid;
+            gap: 1px;
+            background-color: #273552;
+            border: 1px solid #273552;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .pixel-cell {
+            width: 26px;
+            height: 26px;
+            background-color: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.08s ease, filter 0.15s ease;
+        }
+
+        .pixel-cell:hover {
+            filter: brightness(1.2);
+            transform: scale(1.12);
+            z-index: 10;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+        }
+
+        /* Peer cursor indicator */
+        .peer-cursor-ring {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 2px solid var(--peer-color, #38bdf8);
+            border-radius: 3px;
+            pointer-events: none;
+            animation: pulse-ring 1s infinite alternate;
+            z-index: 20;
+        }
+
+        @keyframes pulse-ring {
+            from { opacity: 0.5; transform: scale(1); }
+            to { opacity: 1; transform: scale(1.15); }
+        }
+
+        /* Palette Swatches */
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            max-height: 290px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .palette-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: #0c1220;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+            color: #fff;
+        }
+
+        .palette-btn:hover {
+            border-color: #475569;
+            transform: translateY(-1px);
+        }
+
+        .palette-btn.active {
+            border-color: #38bdf8;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+            background-color: rgba(56, 189, 248, 0.1);
+        }
+
+        .swatch-box {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            flex-shrink: 0;
+        }
+
+        .swatch-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 0.8rem;
+        }
+
+        .swatch-name {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .swatch-sub {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .shortcut-badge {
+            margin-left: auto;
+            background-color: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #334155;
+            font-size: 0.65rem;
+            font-family: monospace;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        /* Teammates List */
+        .players-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .player-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            padding: 6px 10px;
+            background-color: #0c1220;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .player-badge-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        /* Timer display */
+        .timer-badge {
+            font-size: 1.4rem;
+            font-weight: 800;
+            font-family: monospace;
+            color: #38bdf8;
+            background-color: #0c1220;
+            border: 1px solid var(--border-color);
+            padding: 6px 16px;
+            border-radius: 8px;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <a href="/" class="brand">
+            <div class="brand-icon">🎨</div>
+            <div>
+                <h1 class="brand-title" id="navSessionTitle">Loading Session...</h1>
+                <p class="brand-subtitle" id="navImageInfo">Connecting to table...</p>
+            </div>
+        </a>
+        <div style="display: flex; gap: 16px; align-items: center;">
+            <div class="timer-badge" id="timerDisplay">00:00.0</div>
+            <a href="/" class="btn btn-secondary btn-sm">Leave Table</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="game-layout">
+
+            <!-- Left Tool Panel -->
+            <div class="side-panel">
+                <!-- Session Progress Card -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Team Progress</span>
+                        <span id="progressText" style="font-weight: 800; color: #38bdf8; font-size: 1rem;">0.0%</span>
+                    </div>
+                    <div class="progress-container" style="margin-bottom: 12px; height: 12px;">
+                        <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+                        <span>Accuracy: <strong id="accuracyText" style="color: #34d399;">0%</strong></span>
+                        <span>Matched: <strong id="matchedCellsText">0 / 400</strong></span>
+                    </div>
+                </div>
+
+                <!-- Palette Tool -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="margin: 0;">Color Palette</label>
+                        <button class="btn btn-sm btn-secondary" id="eraserBtn" onclick="selectEraser()">🧹 Eraser</button>
+                    </div>
+                    <div class="palette-grid" id="paletteGrid">
+                        <!-- Swatches injected via JS -->
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 10px; text-align: center;">
+                        ⚡ Tip: Press keys <strong>1-9, 0, -, =</strong> to switch colors rapidly!
+                    </div>
+                </div>
+
+                <!-- Teammates Card -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="margin: 0;">Teammates Online (<span id="teammatesCount">1</span>)</label>
+                        <span id="connectionStatus" style="font-size: 0.75rem; color: #34d399;">● Connected</span>
+                    </div>
+                    <div class="players-list" id="playersList">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
+                <!-- View Options -->
+                <div class="card">
+                    <label>View Mode</label>
+                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                        <button class="btn btn-sm" id="btnArtView" style="flex: 1;" onclick="setViewMode('art')">Pure Colors</button>
+                        <button class="btn btn-sm btn-secondary" id="btnCodeView" style="flex: 1;" onclick="setViewMode('codes')">Code Letters</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Canvas / Grid View -->
+            <div class="canvas-panel">
+                <div style="display: flex; justify-content: space-between; width: 100%; max-width: 650px; margin-bottom: 12px; font-size: 0.85rem; color: var(--text-muted);">
+                    <div>Coordinate: <strong id="hoverCoordLabel" style="color: #38bdf8;">--</strong></div>
+                    <div>Click or drag to paint the actual color</div>
+                    <div>Target: <strong id="hoverTargetLabel" style="color: #fff;">--</strong></div>
+                </div>
+
+                <div class="grid-wrapper">
+                    <!-- Top Col Headers (A, B, C...) -->
+                    <div class="col-header-row" id="topColHeaders"></div>
+
+                    <div class="grid-middle-row">
+                        <!-- Left Row Numbers (1, 2, 3...) -->
+                        <div class="row-labels-col" id="leftRowHeaders"></div>
+
+                        <!-- Pixel Board -->
+                        <div class="pixel-board" id="pixelBoard"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Victory Celebration Modal -->
+    <div class="modal-overlay" id="victoryModal">
+        <div class="modal-card" style="max-width: 480px; text-align: center;">
+            <div class="modal-body" style="padding: 40px 24px;">
+                <div style="font-size: 4rem; margin-bottom: 16px;">🏆</div>
+                <h2 style="font-size: 1.8rem; margin: 0 0 10px 0; color: #38bdf8;">Mission Accomplished!</h2>
+                <p style="color: var(--text-muted); margin: 0 0 20px 0;">Your team successfully completed the pixel art mission!</p>
+
+                <div style="background-color: #0c1220; border-radius: 12px; padding: 16px; margin-bottom: 24px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px;">Final Completion Time</div>
+                    <div id="victoryFinalTime" style="font-size: 2rem; font-weight: 800; font-family: monospace; color: #34d399;">00:00.0</div>
+                </div>
+
+                <button class="btn btn-primary" onclick="closeVictoryModal()" style="width: 100%;">Keep Viewing Masterpiece</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/game.js"></script>
+</body>
+</html>
