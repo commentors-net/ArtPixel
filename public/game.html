@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pixel Mission - Collaborative Canvas</title>
     <link rel="stylesheet" href="/css/main.css">
+    <script src="/js/theme.js"></script>
     <style>
         :root {
             --cell-size: 26px;
@@ -35,7 +36,7 @@
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 24px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 25px -5px var(--shadow-color);
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
@@ -58,16 +59,16 @@
             display: flex;
             align-items: center;
             gap: 4px;
-            background-color: #0c1220;
+            background-color: var(--subtle-box-bg);
             border: 1px solid var(--border-color);
             padding: 3px 6px;
             border-radius: 6px;
         }
 
         .zoom-btn {
-            background-color: #1e293b;
-            color: #fff;
-            border: 1px solid #334155;
+            background-color: var(--btn-secondary-bg);
+            color: var(--btn-secondary-text);
+            border: 1px solid var(--border-color);
             width: 24px;
             height: 24px;
             border-radius: 4px;
@@ -80,13 +81,13 @@
             padding: 0;
         }
         .zoom-btn:hover {
-            background-color: #334155;
+            background-color: var(--btn-secondary-hover);
         }
 
         /* Coordinate Grid Wrapper */
         .grid-wrapper {
             display: inline-block;
-            background-color: #0c1220;
+            background-color: var(--grid-bg);
             padding: 10px;
             border-radius: 12px;
             border: 2px solid var(--border-color);
@@ -141,8 +142,8 @@
         .pixel-board {
             display: grid;
             gap: 1px;
-            background-color: #273552;
-            border: 1px solid #273552;
+            background-color: var(--grid-lines);
+            border: 1px solid var(--grid-lines);
             border-radius: 4px;
             overflow: hidden;
             touch-action: none; /* enables smooth finger touch painting */
@@ -151,7 +152,7 @@
         .pixel-cell {
             width: var(--cell-size, 26px);
             height: var(--cell-size, 26px);
-            background-color: #111827;
+            background-color: var(--cell-empty-bg);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -196,7 +197,7 @@
             overflow-y: auto;
             padding-right: 2px;
             scrollbar-width: thin;
-            scrollbar-color: #334155 transparent;
+            scrollbar-color: var(--border-color) transparent;
         }
 
         .palette-grid::-webkit-scrollbar {
@@ -206,7 +207,7 @@
             background: transparent;
         }
         .palette-grid::-webkit-scrollbar-thumb {
-            background: #334155;
+            background: var(--border-color);
             border-radius: 4px;
         }
 
@@ -214,20 +215,20 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            background-color: #0c1220;
-            border: 2px solid var(--border-color);
+            background-color: var(--palette-btn-bg);
+            border: 2px solid var(--palette-btn-border);
             border-radius: 8px;
             padding: 7px 8px;
             cursor: pointer;
             transition: all 0.15s ease;
             text-align: left;
-            color: #fff;
+            color: var(--palette-btn-text);
             min-width: 0; /* Prevents overflow blowout */
             box-sizing: border-box;
         }
 
         .palette-btn:hover {
-            border-color: #475569;
+            border-color: var(--palette-btn-hover);
             transform: translateY(-1px);
         }
 
@@ -271,9 +272,9 @@
 
         .shortcut-badge {
             margin-left: auto;
-            background-color: #1e293b;
-            color: #94a3b8;
-            border: 1px solid #334155;
+            background-color: var(--shortcut-bg);
+            color: var(--shortcut-color);
+            border: 1px solid var(--shortcut-border);
             font-size: 0.62rem;
             font-family: monospace;
             padding: 2px 4px;
@@ -296,9 +297,10 @@
             justify-content: space-between;
             font-size: 0.82rem;
             padding: 6px 10px;
-            background-color: #0c1220;
+            background-color: var(--player-item-bg);
             border-radius: 6px;
             border: 1px solid var(--border-color);
+            color: var(--text-main);
         }
 
         .player-badge-dot {
@@ -314,8 +316,8 @@
             font-size: 1.3rem;
             font-weight: 800;
             font-family: monospace;
-            color: #38bdf8;
-            background-color: #0c1220;
+            color: var(--timer-color);
+            background-color: var(--timer-bg);
             border: 1px solid var(--border-color);
             padding: 6px 14px;
             border-radius: 8px;
@@ -435,6 +437,7 @@
         </a>
         <div style="display: flex; gap: 10px; align-items: center;">
             <div class="timer-badge" id="timerDisplay">00:00.0</div>
+            <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙 Theme</button>
             <a href="/" class="btn btn-secondary btn-sm">Leave</a>
         </div>
     </header>
@@ -445,8 +448,8 @@
             <!-- Main Canvas / Grid View (Placed First on Mobile) -->
             <div class="canvas-panel">
                 <div class="canvas-toolbar">
-                    <div>Coord: <strong id="hoverCoordLabel" style="color: #38bdf8;">--</strong></div>
-                    <div>Target: <strong id="hoverTargetLabel" style="color: #fff;">--</strong></div>
+                    <div>Coord: <strong id="hoverCoordLabel" style="color: var(--accent);">--</strong></div>
+                    <div>Target: <strong id="hoverTargetLabel" style="color: var(--text-main);">--</strong></div>
                     
                     <div class="zoom-controls">
                         <span style="font-size: 0.72rem; margin-right: 4px;">Zoom:</span>

@@ -363,8 +363,8 @@ function updateCellDOM(r, c, code) {
         cell.style.color = activePalette[code].text;
         cell.textContent = (viewMode === 'codes') ? code : '';
     } else {
-        cell.style.backgroundColor = '#111827';
-        cell.style.color = '#334155';
+        cell.style.backgroundColor = '';
+        cell.style.color = '';
         cell.textContent = '';
     }
 }
@@ -377,6 +377,10 @@ function renderAllCells() {
         }
     }
 }
+
+window.onThemeChange = function() {
+    renderAllCells();
+};
 
 function setViewMode(mode) {
     viewMode = mode;

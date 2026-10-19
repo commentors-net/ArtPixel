@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel Mission - Admin Command Center</title>
     <link rel="stylesheet" href="/css/main.css">
+    <script src="/js/theme.js"></script>
     <style>
         .admin-grid {
             display: grid;
@@ -41,7 +42,7 @@
         }
 
         .canvas-thumb-wrapper {
-            background-color: #0c1220;
+            background-color: var(--subtle-box-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 6px;
@@ -57,7 +58,7 @@
         }
 
         .audit-stream-box {
-            background-color: #0c1220;
+            background-color: var(--subtle-box-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             max-height: 380px;
@@ -87,6 +88,7 @@
         </a>
         <div style="display: flex; gap: 12px; align-items: center;">
             <span id="adminLiveTick" class="badge badge-running">● Live Telemetry 1Hz</span>
+            <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙 Theme</button>
             <a href="/" class="btn btn-secondary btn-sm">← Player Lobby</a>
         </div>
     </header>
@@ -96,7 +98,7 @@
         <!-- Top Setup Card: Create N Sessions per Image -->
         <div class="card" style="margin-bottom: 28px; border-color: rgba(56, 189, 248, 0.3);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h2 style="font-size: 1.25rem; margin: 0; font-weight: 700; color: #fff;">
+                <h2 style="font-size: 1.25rem; margin: 0; font-weight: 700; color: var(--text-main);">
                     🚀 Setup New Image Sessions
                 </h2>
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Configure table sessions, player limits & images</span>

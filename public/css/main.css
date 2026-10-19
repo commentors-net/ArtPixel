@@ -13,6 +13,77 @@
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
+
+    /* Dark Theme Component Tokens */
+    --header-bg: linear-gradient(180deg, #131b2e 0%, #0d1424 100%);
+    --input-bg: #0c1220;
+    --cell-empty-bg: #111827;
+    --cell-empty-text: #334155;
+    --grid-bg: #0c1220;
+    --grid-lines: #273552;
+    --timer-bg: #0c1220;
+    --timer-color: #38bdf8;
+    --palette-btn-bg: #0c1220;
+    --palette-btn-text: #f8fafc;
+    --palette-btn-border: #273552;
+    --palette-btn-hover: #475569;
+    --shortcut-bg: #1e293b;
+    --shortcut-color: #94a3b8;
+    --shortcut-border: #334155;
+    --player-item-bg: #0c1220;
+    --table-header-bg: #0c1220;
+    --progress-bg: #0c1220;
+    --subtle-box-bg: #0c1220;
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --btn-secondary-bg: #334155;
+    --btn-secondary-text: #f1f5f9;
+    --btn-secondary-hover: #475569;
+    --hero-title-gradient: linear-gradient(135deg, #f8fafc 0%, #38bdf8 100%);
+    --hero-bg: radial-gradient(circle at top, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+}
+
+[data-theme="light"], body.theme-light {
+    --bg-dark: #f8fafc;
+    --panel-bg: #ffffff;
+    --panel-hover: #f1f5f9;
+    --card-bg: #ffffff;
+    --border-color: #cbd5e1;
+    --border-focus: #0284c7;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --primary: #0284c7;
+    --primary-hover: #0369a1;
+    --accent: #0284c7;
+    --success: #059669;
+    --warning: #d97706;
+    --danger: #dc2626;
+
+    /* Light Theme Component Tokens */
+    --header-bg: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    --input-bg: #ffffff;
+    --cell-empty-bg: #e2e8f0;
+    --cell-empty-text: #94a3b8;
+    --grid-bg: #f8fafc;
+    --grid-lines: #cbd5e1;
+    --timer-bg: #f1f5f9;
+    --timer-color: #0284c7;
+    --palette-btn-bg: #ffffff;
+    --palette-btn-text: #0f172a;
+    --palette-btn-border: #cbd5e1;
+    --palette-btn-hover: #94a3b8;
+    --shortcut-bg: #e2e8f0;
+    --shortcut-color: #475569;
+    --shortcut-border: #cbd5e1;
+    --player-item-bg: #f8fafc;
+    --table-header-bg: #f1f5f9;
+    --progress-bg: #e2e8f0;
+    --subtle-box-bg: #f8fafc;
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --btn-secondary-bg: #e2e8f0;
+    --btn-secondary-text: #1e293b;
+    --btn-secondary-hover: #cbd5e1;
+    --hero-title-gradient: linear-gradient(135deg, #0f172a 0%, #0284c7 100%);
+    --hero-bg: radial-gradient(circle at top, rgba(2, 132, 199, 0.1) 0%, transparent 70%);
 }
 
 * {
@@ -26,11 +97,12 @@ body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Header */
 .app-header {
-    background: linear-gradient(180deg, #131b2e 0%, #0d1424 100%);
+    background: var(--header-bg);
     border-bottom: 1px solid var(--border-color);
     padding: 14px 28px;
     display: flex;
@@ -67,7 +139,7 @@ body {
     font-size: 1.25rem;
     font-weight: 700;
     letter-spacing: -0.5px;
-    color: #fff;
+    color: var(--text-main);
     margin: 0;
 }
 
@@ -90,7 +162,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 25px -5px var(--shadow-color);
 }
 
 /* Buttons */
@@ -121,11 +193,11 @@ body {
 }
 
 .btn-secondary {
-    background-color: #334155;
-    color: #f1f5f9;
+    background-color: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
 }
 .btn-secondary:hover {
-    background-color: #475569;
+    background-color: var(--btn-secondary-hover);
 }
 
 .btn-success {
@@ -157,7 +229,7 @@ body {
 
 /* Form controls */
 input[type="text"], input[type="number"], select {
-    background-color: #0c1220;
+    background-color: var(--input-bg);
     border: 1px solid var(--border-color);
     color: var(--text-main);
     padding: 9px 12px;
@@ -165,7 +237,7 @@ input[type="text"], input[type="number"], select {
     font-size: 0.9rem;
     width: 100%;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color 0.2s;
 }
 
 input:focus, select:focus {
@@ -229,7 +301,7 @@ label {
 /* Progress Bar */
 .progress-container {
     width: 100%;
-    background-color: #0c1220;
+    background-color: var(--progress-bg);
     border-radius: 9999px;
     height: 10px;
     overflow: hidden;
@@ -251,7 +323,7 @@ label {
 }
 
 .data-table th {
-    background-color: #0c1220;
+    background-color: var(--table-header-bg);
     color: var(--text-muted);
     font-weight: 600;
     text-align: left;
@@ -264,11 +336,11 @@ label {
 
 .data-table td {
     padding: 10px 14px;
-    border-bottom: 1px solid rgba(39, 53, 82, 0.5);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .data-table tr:hover {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: var(--panel-hover);
 }
 
 /* Modal Overlay */
@@ -278,7 +350,7 @@ label {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(9, 13, 22, 0.85);
+    background-color: rgba(9, 13, 22, 0.75);
     backdrop-filter: blur(4px);
     display: none;
     align-items: center;

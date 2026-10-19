@@ -5,19 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel Mission - Multiplayer Lobby</title>
     <link rel="stylesheet" href="/css/main.css">
+    <script src="/js/theme.js"></script>
     <style>
         .hero {
             text-align: center;
             margin-bottom: 32px;
             padding: 30px 20px;
-            background: radial-gradient(circle at top, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+            background: var(--hero-bg);
             border-radius: 16px;
-            border: 1px solid rgba(56, 189, 248, 0.15);
+            border: 1px solid var(--border-color);
         }
         .hero h1 {
             font-size: 2.2rem;
             margin: 0 0 10px 0;
-            background: linear-gradient(135deg, #f8fafc 0%, #38bdf8 100%);
+            background: var(--hero-title-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -82,12 +83,12 @@
             display: flex;
             flex-direction: column;
             gap: 14px;
-            transition: transform 0.2s, border-color 0.2s;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
         }
         .session-card:hover {
             transform: translateY(-2px);
-            border-color: rgba(56, 189, 248, 0.4);
-            box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.4);
+            border-color: var(--border-focus);
+            box-shadow: 0 12px 24px -6px var(--shadow-color);
         }
 
         .session-card-header {
@@ -98,7 +99,7 @@
         .session-title {
             font-size: 1.15rem;
             font-weight: 700;
-            color: #fff;
+            color: var(--text-main);
             margin: 0 0 4px 0;
         }
         .session-subtitle {
@@ -135,7 +136,7 @@
             </div>
         </a>
         <div style="display: flex; gap: 12px; align-items: center;">
-            <a href="/admin.html" class="btn btn-secondary btn-sm">⚙️ Admin Center</a>
+            <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙 Theme</button>
         </div>
     </header>
 
@@ -166,9 +167,9 @@
 
         <div id="emptyState" class="empty-sessions" style="display: none;">
             <div style="font-size: 3rem; margin-bottom: 12px;">🖼️</div>
-            <h3 style="color: #fff; margin: 0 0 8px 0;">No Active Sessions Right Now</h3>
-            <p style="margin: 0 0 20px 0;">An administrator has not created any game tables yet.</p>
-            <a href="/admin.html" class="btn">Go to Admin Dashboard to Create Sessions</a>
+            <h3 style="color: var(--text-main); margin: 0 0 8px 0;">No Active Sessions Right Now</h3>
+            <p style="margin: 0 0 20px 0;">No game tables are currently open. Waiting for sessions to be created...</p>
+            <button class="btn" onclick="fetchSessions()">🔄 Refresh Sessions</button>
         </div>
     </div>
 
