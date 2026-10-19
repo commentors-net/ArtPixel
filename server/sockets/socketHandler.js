@@ -15,7 +15,7 @@ function setupSockets(io) {
         // --- PLAYER EVENTS ---
         socket.on('session:join', ({ sessionId, nickname, clientToken }, callback) => {
             try {
-                const { session, player } = sessionManager.joinPlayer(sessionId, {
+                const { session, player, timerStarted } = sessionManager.joinPlayer(sessionId, {
                     socketId: socket.id,
                     nickname,
                     clientToken
@@ -35,6 +35,17 @@ function setupSockets(io) {
                     activeCount: session.players.size
                 });
 
+                // If timer just started on join, broadcast to all players in the room
+                if (timerStarted) {
+                    io.to(`session:${sessionId}`).emit('timer:sync', {
+                        sessionId,
+                        running: session.timer.running,
+                        elapsedMs: session.timer.elapsedMs,
+                        startedAt: session.timer.startedAt,
+                        serverTime: Date.now()
+                    });
+                }
+
                 const initPayload = {
                     session: {
                         id: session.id,
@@ -47,7 +58,12 @@ function setupSockets(io) {
                         palette: session.palette,
                         currentGrid: session.currentGrid,
                         stats: session.stats,
-                        timer: session.timer
+                        timer: {
+                            running: session.timer.running,
+                            elapsedMs: session.timer.elapsedMs,
+                            startedAt: session.timer.startedAt,
+                            serverTime: Date.now()
+                        }
                     },
                     image: {
                         id: image.id,
@@ -111,11 +127,29 @@ function setupSockets(io) {
                 // Broadcast to all players in the session (including sender for authoritative sync)
                 io.to(`session:${sessionId}`).emit('pixel:updated', updatePayload);
 
+                // If painting triggered timer start, broadcast timer:sync
+                if (result.timerStarted) {
+                    io.to(`session:${sessionId}`).emit('timer:sync', {
+                        sessionId,
+                        running: result.session.timer.running,
+                        elapsedMs: result.session.timer.elapsedMs,
+                        startedAt: result.session.timer.startedAt,
+                        serverTime: Date.now()
+                    });
+                }
+
                 // Send live audit event to admin drill-down room
                 io.to(`admin:session:${sessionId}`).emit('admin:audit_event', result.logEntry);
 
                 // If completed 100%, trigger victory
                 if (result.isCompletedNow) {
+                    io.to(`session:${sessionId}`).emit('timer:sync', {
+                        sessionId,
+                        running: false,
+                        elapsedMs: result.session.timer.elapsedMs,
+                        startedAt: null,
+                        serverTime: Date.now()
+                    });
                     io.to(`session:${sessionId}`).emit('session:completed', {
                         sessionId,
                         stats: result.session.stats,
@@ -194,6 +228,13 @@ function setupSockets(io) {
                     sessionId,
                     grid: session.currentGrid,
                     stats: session.stats
+                });
+                io.to(`session:${sessionId}`).emit('timer:sync', {
+                    sessionId,
+                    running: session.timer.running,
+                    elapsedMs: session.timer.elapsedMs,
+                    startedAt: session.timer.startedAt,
+                    serverTime: Date.now()
                 });
             } catch (err) {
                 socket.emit('error:rejected', { message: err.message });

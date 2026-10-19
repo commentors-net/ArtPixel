@@ -482,20 +482,32 @@ socket.on('timer:sync', (timerPayload) => {
     syncTimer(timerPayload);
 });
 
+let localSyncAt = Date.now();
+let serverBaseElapsed = 0;
+
 function syncTimer(timer) {
     if (!timer) return;
-    timerRunning = timer.running;
-    elapsedMs = timer.elapsedMs || 0;
-    timerStartedAt = timer.startedAt || null;
+    timerRunning = Boolean(timer.running);
+    
+    // Calculate exact elapsed ms up to the moment of sync
+    const baseElapsed = Number(timer.elapsedMs) || 0;
+    const serverTime = Number(timer.serverTime) || Date.now();
+    const startedAt = Number(timer.startedAt) || 0;
+    const runningElapsed = (timerRunning && startedAt > 0) ? Math.max(0, serverTime - startedAt) : 0;
+    serverBaseElapsed = baseElapsed + runningElapsed;
+    localSyncAt = Date.now();
 
     if (timerTicker) clearInterval(timerTicker);
 
     const updateTimerDisplay = () => {
-        let currentElapsed = elapsedMs;
-        if (timerRunning && timerStartedAt) {
-            currentElapsed += (Date.now() - timerStartedAt);
+        let currentElapsed = serverBaseElapsed;
+        if (timerRunning) {
+            currentElapsed += (Date.now() - localSyncAt);
         }
-        document.getElementById('timerDisplay').textContent = formatTime(currentElapsed);
+        const timerEl = document.getElementById('timerDisplay');
+        if (timerEl) {
+            timerEl.textContent = formatTime(currentElapsed);
+        }
     };
 
     updateTimerDisplay();
@@ -504,7 +516,17 @@ function syncTimer(timer) {
     }
 }
 
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && timerRunning) {
+        const timerEl = document.getElementById('timerDisplay');
+        if (timerEl) {
+            timerEl.textContent = formatTime(serverBaseElapsed + (Date.now() - localSyncAt));
+        }
+    }
+});
+
 function formatTime(msTotal) {
+    if (isNaN(msTotal) || msTotal < 0) msTotal = 0;
     const secTotal = msTotal / 1000;
     const mins = Math.floor(secTotal / 60);
     const secs = Math.floor(secTotal % 60);

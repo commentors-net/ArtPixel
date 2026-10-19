@@ -54,11 +54,17 @@ class SessionManager {
                 }
             }
 
+            const completedPct = Number(row.stats_completed_pct) || 0;
+            let initialStatus = row.status || 'waiting';
+            if (completedPct < 100 && initialStatus === 'completed') {
+                initialStatus = 'waiting';
+            }
+
             const sessionState = {
                 id: row.id,
                 imageId: row.image_id,
                 name: row.name,
-                status: row.status,
+                status: initialStatus,
                 maxPlayers: row.max_players,
                 width: image.width,
                 height: image.height,
@@ -68,16 +74,16 @@ class SessionManager {
                 masterGrid: image.master_grid,
                 currentGrid,
                 timer: {
-                    running: Boolean(row.timer_running),
+                    running: false,
                     elapsedMs: row.elapsed_ms || 0,
-                    startedAt: row.timer_started_at || null
+                    startedAt: null
                 },
                 stats: {
                     totalTargetCells,
                     matchingCellsCount,
                     totalPlacedAttempts: row.stats_total_placed || 0,
                     totalCorrectAttempts: row.stats_correct_placed || 0,
-                    completedPercent: Number(row.stats_completed_pct) || 0,
+                    completedPercent: completedPct,
                     accuracyPercent: Number(row.stats_accuracy_pct) || 0
                 },
                 players: new Map(), // socketId -> ActivePlayer
@@ -284,7 +290,18 @@ class SessionManager {
             session.status = 'running';
         }
 
-        return { session, player };
+        // Auto-start timer when player joins if not already running and not 100% completed/locked/paused
+        let timerStarted = false;
+        const isCompleted100 = session.stats.completedPercent >= 100;
+        if (!session.timer.running && !isCompleted100 && session.status !== 'locked' && session.status !== 'paused') {
+            session.timer.running = true;
+            session.timer.startedAt = Date.now();
+            session.status = 'running';
+            session.dirty = true;
+            timerStarted = true;
+        }
+
+        return { session, player, timerStarted };
     }
 
     leavePlayer(socketId) {
@@ -316,6 +333,16 @@ class SessionManager {
         const c = parseInt(col, 10);
         if (r < 0 || r >= session.height || c < 0 || c >= session.width) {
             throw new Error(`Coordinates out of bounds: row ${r}, col ${c}`);
+        }
+
+        // Auto-start timer if a player starts painting and timer wasn't running
+        let timerStarted = false;
+        if (!session.timer.running && session.status !== 'completed' && session.status !== 'locked' && session.status !== 'paused') {
+            session.timer.running = true;
+            session.timer.startedAt = Date.now();
+            if (session.status === 'waiting') session.status = 'running';
+            session.dirty = true;
+            timerStarted = true;
         }
 
         const validCode = (colorCode && session.palette[colorCode]) ? colorCode : '';
@@ -403,7 +430,8 @@ class SessionManager {
             coordLabel,
             logEntry,
             player: activePlayer,
-            isCompletedNow
+            isCompletedNow,
+            timerStarted
         };
     }
 
@@ -414,6 +442,13 @@ class SessionManager {
         session.currentGrid = Array.from({ length: session.height }, () => Array(session.width).fill(''));
         session.stats.matchingCellsCount = 0;
         session.stats.completedPercent = 0;
+        session.stats.accuracyPercent = 0;
+        session.stats.totalPlacedAttempts = 0;
+        session.stats.totalCorrectAttempts = 0;
+        session.status = session.players.size > 0 ? 'running' : 'waiting';
+        session.timer.running = session.players.size > 0;
+        session.timer.elapsedMs = 0;
+        session.timer.startedAt = session.players.size > 0 ? Date.now() : null;
         session.dirty = true;
 
         auditLogger.logAction({
@@ -519,14 +554,15 @@ class SessionManager {
         let hasDirty = false;
         for (const session of this.sessions.values()) {
             if (session.dirty) {
-                let elapsed = session.timer.elapsedMs;
                 if (session.timer.running && session.timer.startedAt) {
-                    elapsed += (Date.now() - session.timer.startedAt);
+                    const now = Date.now();
+                    session.timer.elapsedMs += (now - session.timer.startedAt);
+                    session.timer.startedAt = now;
                 }
 
                 updateStmt.run(
                     session.status,
-                    elapsed,
+                    session.timer.elapsedMs,
                     session.timer.running ? 1 : 0,
                     session.timer.startedAt,
                     JSON.stringify(session.currentGrid),
