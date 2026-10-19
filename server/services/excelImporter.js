@@ -15,15 +15,7 @@ function getContrastTextColor(hex) {
 
 function importExcelData(filePath) {
     console.log(`[Importer] Reading Excel file: ${filePath}`);
-    const workbook = xlsx.readFile(filePath);
-    
-    // Check if images already imported
-    const countStmt = db.prepare('SELECT COUNT(*) as count FROM images');
-    const existingCount = Number(countStmt.get().count);
-    if (existingCount > 0) {
-        console.log(`[Importer] Database already contains ${existingCount} images. Skipping initial seed.`);
-        return;
-    }
+    const workbook = xlsx.readFile(filePath, { cellStyles: true });
 
     const insertStmt = db.prepare(`
         INSERT OR REPLACE INTO images (
@@ -112,7 +104,8 @@ function importExcelData(filePath) {
             difficulty: 'Expert (25x25 Grid)',
             startRow: 4, endRow: 28,
             startCol: 'B', endCol: 'Z',
-            is25x25: true
+            is25x25: true,
+            internetDayPalette: true
         }
     ];
 
@@ -142,7 +135,36 @@ function importExcelData(filePath) {
 
             // Palette extraction
             const palette = {};
-            if (cfg.customPaletteCols && cfg.paletteRows) {
+            const rgbToCode = {};
+
+            if (cfg.internetDayPalette) {
+                // Sheet 6 has two-column palette in rows 32-37:
+                // Column B (swatch), C (code), D (name)
+                // Column O (swatch), P (code), Q (name)
+                for (let r = 32; r <= 37; r++) {
+                    const swatch1 = ws[`B${r}`];
+                    const code1 = ws[`C${r}`] ? String(ws[`C${r}`].v).trim() : '';
+                    const name1 = ws[`D${r}`] ? String(ws[`D${r}`].v).trim() : code1;
+                    let hex1 = (swatch1 && swatch1.s && swatch1.s.fgColor && swatch1.s.fgColor.rgb) ? swatch1.s.fgColor.rgb : '';
+                    if (hex1.length > 6) hex1 = hex1.substring(hex1.length - 6);
+                    if (code1 && hex1) {
+                        const cleanHex = '#' + hex1.toUpperCase();
+                        palette[code1] = { name: name1, hex: cleanHex, text: getContrastTextColor(cleanHex) };
+                        rgbToCode[hex1.toUpperCase()] = code1;
+                    }
+
+                    const swatch2 = ws[`O${r}`];
+                    const code2 = ws[`P${r}`] ? String(ws[`P${r}`].v).trim() : '';
+                    const name2 = ws[`Q${r}`] ? String(ws[`Q${r}`].v).trim() : code2;
+                    let hex2 = (swatch2 && swatch2.s && swatch2.s.fgColor && swatch2.s.fgColor.rgb) ? swatch2.s.fgColor.rgb : '';
+                    if (hex2.length > 6) hex2 = hex2.substring(hex2.length - 6);
+                    if (code2 && hex2) {
+                        const cleanHex = '#' + hex2.toUpperCase();
+                        palette[code2] = { name: name2, hex: cleanHex, text: getContrastTextColor(cleanHex) };
+                        rgbToCode[hex2.toUpperCase()] = code2;
+                    }
+                }
+            } else if (cfg.customPaletteCols && cfg.paletteRows) {
                 for (let r = cfg.paletteRows[0]; r <= cfg.paletteRows[1]; r++) {
                     const codeCell = ws[`${cfg.customPaletteCols.code}${r}`];
                     const nameCell = ws[`${cfg.customPaletteCols.name}${r}`];
@@ -157,26 +179,15 @@ function importExcelData(filePath) {
                             hex,
                             text: getContrastTextColor(hex)
                         };
+                        const cleanHex = hex.replace('#', '').toUpperCase();
+                        rgbToCode[cleanHex] = code;
                     }
                 }
-            } else if (cfg.is25x25) {
-                const intDayPalette = {
-                    'D': { name: 'Dark Blue', hex: '#002060', text: '#FFFFFF' },
-                    'U': { name: 'Blue', hex: '#0070C0', text: '#FFFFFF' },
-                    'A': { name: 'Light Blue', hex: '#00B0F0', text: '#1C1C1C' },
-                    'G': { name: 'Green', hex: '#00B050', text: '#FFFFFF' },
-                    'L': { name: 'Light Green', hex: '#92D050', text: '#1C1C1C' },
-                    'Y': { name: 'Yellow', hex: '#FFFF00', text: '#1C1C1C' },
-                    'O': { name: 'Orange', hex: '#FFC000', text: '#1C1C1C' },
-                    'R': { name: 'Red', hex: '#FF0000', text: '#FFFFFF' },
-                    'W': { name: 'White', hex: '#FFFFFF', text: '#1C1C1C' },
-                    'K': { name: 'Black', hex: '#000000', text: '#FFFFFF' },
-                    'T': { name: 'Tan', hex: '#EEECE1', text: '#1C1C1C' },
-                    'F': { name: 'Orange Theme', hex: '#ED7D31', text: '#FFFFFF' }
-                };
-                Object.assign(palette, intDayPalette);
             } else {
                 Object.assign(palette, std12Palette);
+                for (const [code, info] of Object.entries(std12Palette)) {
+                    rgbToCode[info.hex.replace('#', '').toUpperCase()] = code;
+                }
             }
 
             // Master Grid extraction
@@ -190,7 +201,17 @@ function importExcelData(filePath) {
                     const colLetter = String.fromCharCode(startColCode + c);
                     const cellRef = `${colLetter}${r}`;
                     const cell = ws[cellRef];
-                    const val = (cell && cell.v !== undefined) ? String(cell.v).trim() : '';
+                    let val = (cell && cell.v !== undefined && cell.v !== '') ? String(cell.v).trim() : '';
+
+                    // Fallback to cell background color (for Sheet 6 where cells have no text, only solid fills)
+                    if (!val && cell && cell.s && cell.s.fgColor && cell.s.fgColor.rgb) {
+                        let rgb = String(cell.s.fgColor.rgb).toUpperCase();
+                        if (rgb.length > 6) rgb = rgb.substring(rgb.length - 6);
+                        if (rgbToCode[rgb]) {
+                            val = rgbToCode[rgb];
+                        }
+                    }
+
                     rowValues.push(val);
                     if (val && palette[val]) {
                         totalTargetCells++;
@@ -219,7 +240,7 @@ function importExcelData(filePath) {
             importedCount++;
         }
         db.exec('COMMIT;');
-        console.log(`[Importer] Successfully imported ${importedCount} images into database.`);
+        console.log(`[Importer] Successfully updated/seeded ${importedCount} images in database.`);
     } catch (err) {
         db.exec('ROLLBACK;');
         console.error('[Importer] Error importing images:', err);

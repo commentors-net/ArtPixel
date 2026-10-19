@@ -24,14 +24,11 @@ async function bootstrap() {
     await restoreDatabaseFromGCS(dbPath);
 
 
-    // 2. Initialize database and services
+    // 2. Initialize database
     const db = require('./db/database');
     const { importExcelData } = require('./services/excelImporter');
-    const { setupSockets } = require('./sockets/socketHandler');
-    const adminRoutes = require('./routes/adminRoutes');
-    const sessionRoutes = require('./routes/sessionRoutes');
 
-    // 3. Seed Excel data if library is empty
+    // 3. Seed and update Excel preset data
     const excelFile = path.join(__dirname, '../Pixel_Mission_Sample_Images.xlsx');
     try {
         importExcelData(excelFile);
@@ -39,7 +36,16 @@ async function bootstrap() {
         console.error('[Bootstrap] Failed to import Excel images:', err.message);
     }
 
-    // 4. Routes
+    // 4. Load Session Manager with up-to-date images and sessions
+    const sessionManager = require('./services/sessionManager');
+    sessionManager.loadImages();
+    sessionManager.loadSessionsFromDb();
+
+    const { setupSockets } = require('./sockets/socketHandler');
+    const adminRoutes = require('./routes/adminRoutes');
+    const sessionRoutes = require('./routes/sessionRoutes');
+
+    // 5. Routes
     app.use('/api/admin', adminRoutes);
     app.use('/api/sessions', sessionRoutes);
 

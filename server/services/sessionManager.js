@@ -42,7 +42,7 @@ class SessionManager {
             const currentGrid = JSON.parse(row.current_grid);
             const totalTargetCells = image.total_target_cells || (image.width * image.height);
             
-            // Calculate matching cells
+            // Calculate matching cells against authoritative master grid
             let matchingCellsCount = 0;
             for (let r = 0; r < image.height; r++) {
                 for (let c = 0; c < image.width; c++) {
@@ -54,10 +54,12 @@ class SessionManager {
                 }
             }
 
-            const completedPct = Number(row.stats_completed_pct) || 0;
+            const calculatedCompletedPct = Number(((matchingCellsCount / totalTargetCells) * 100).toFixed(1));
             let initialStatus = row.status || 'waiting';
-            if (completedPct < 100 && initialStatus === 'completed') {
-                initialStatus = 'waiting';
+            if (calculatedCompletedPct >= 100) {
+                initialStatus = 'completed';
+            } else if (calculatedCompletedPct > 0 && initialStatus === 'waiting') {
+                initialStatus = 'running';
             }
 
             const sessionState = {
@@ -81,13 +83,15 @@ class SessionManager {
                 stats: {
                     totalTargetCells,
                     matchingCellsCount,
-                    totalPlacedAttempts: row.stats_total_placed || 0,
-                    totalCorrectAttempts: row.stats_correct_placed || 0,
-                    completedPercent: completedPct,
-                    accuracyPercent: Number(row.stats_accuracy_pct) || 0
+                    totalPlacedAttempts: Math.max(Number(row.stats_total_placed) || 0, matchingCellsCount),
+                    totalCorrectAttempts: Math.max(Number(row.stats_correct_placed) || 0, matchingCellsCount),
+                    completedPercent: calculatedCompletedPct,
+                    accuracyPercent: (Number(row.stats_total_placed) > 0)
+                        ? Number(((matchingCellsCount / Math.max(Number(row.stats_total_placed) || 1, matchingCellsCount)) * 100).toFixed(1))
+                        : (matchingCellsCount > 0 ? 100 : 0)
                 },
                 players: new Map(), // socketId -> ActivePlayer
-                dirty: false
+                dirty: true
             };
 
             this.sessions.set(sessionState.id, sessionState);
@@ -476,6 +480,9 @@ class SessionManager {
         session.currentGrid = JSON.parse(JSON.stringify(session.masterGrid));
         session.stats.matchingCellsCount = session.stats.totalTargetCells;
         session.stats.completedPercent = 100.0;
+        session.stats.totalPlacedAttempts = Math.max(session.stats.totalPlacedAttempts, session.stats.totalTargetCells);
+        session.stats.totalCorrectAttempts = Math.max(session.stats.totalCorrectAttempts, session.stats.totalTargetCells);
+        session.stats.accuracyPercent = 100.0;
         session.status = 'completed';
         if (session.timer.running) {
             this.setTimerState(sessionId, 'pause');

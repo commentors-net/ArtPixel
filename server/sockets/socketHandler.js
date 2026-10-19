@@ -261,6 +261,13 @@ function setupSockets(io) {
                     grid: session.currentGrid,
                     stats: session.stats
                 });
+                io.to(`session:${sessionId}`).emit('timer:sync', {
+                    sessionId,
+                    running: false,
+                    elapsedMs: session.timer.elapsedMs,
+                    startedAt: null,
+                    serverTime: Date.now()
+                });
                 io.to(`session:${sessionId}`).emit('session:completed', {
                     sessionId,
                     stats: session.stats,
